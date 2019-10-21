@@ -20,10 +20,5 @@ def load_images_from_folder(folder):
 
     return images
 
-
-
-
-
-
 if __name__ == '__main__':
     print(len(load_images_from_folder('lfwcrop_color/faces')))
