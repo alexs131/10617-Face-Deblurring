@@ -42,7 +42,8 @@ if __name__ == "__main__":
     learning_rate = .001
     num_epochs = 100
 
-    dataset = LFWC(["../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces_pixelated"], "../lfwcrop_color/faces")
+    #dataset = LFWC(["../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces_pixelated"], "../lfwcrop_color/faces")
+    dataset = LFWC(["../train/faces_blurred"], "../train/faces")
 
     #dataset = FakeData(size=1000, image_size=(3, 128, 128), transform=transforms.ToTensor())
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True)
