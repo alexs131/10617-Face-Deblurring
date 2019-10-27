@@ -5,8 +5,9 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.utils import save_image
-from torchvision.datasets import MNIST
+from torchvision.datasets import FakeData
 import os
+from collections import OrderedDict
 
 def to_img(x):
     x = 0.5 * (x + 1)
@@ -24,50 +25,48 @@ img_transform = transforms.Compose([
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
 ])
 
+dataset = FakeData()
+
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-class ResBlock(nn.module):
-    def __init__(self, shape):
+class ResBlock(nn.Module):
+    def __init__(self, inputChannels, outputChannels, filterSize):
         super(ResBlock, self).__init__()
         self.block = nn.Sequential(
-            nn.Conv2d(shape),
+            nn.Conv2d(inputChannels, outputChannels, filterSize),
             nn.ReLU(),
-            nn.Conv2d(shape),
-            nn.ReLU(),
+            nn.Conv2d(inputChannels, outputChannels, filterSize)
         )
 
     def forward(self, x):
         return x + self.block(x)
 
 
-class ResAutoencoder(nn.module):
+class ResAutoencoder(nn.Module):
     def __init__(self):
         super(ResAutoencoder, self).__init__()
+        self.conv1 = nn.Conv2d(3, 8, 5, stride=2),
+        self.res1 = ResBlock(8, 8, 5),
+        self.conv2 = nn.Conv2d(8, 16, 5, stride=2),
+        self.res2 = ResBlock(16, 16, 5),
+        self.conv3 = nn.Conv2d(16, 32, 3, stride=2),
+        self.res3 = ResBlock(32, 32, 3)
+
         self.encoder = nn.Sequential(
-            nn.Conv2d(3, 8, 5, stride=2),
-            ResBlock(),
-            ResBlock(),
-            nn.Conv2d(),
-            ResBlock(),
-            ResBlock(),
-            nn.Conv2d(),
-            ResBlock()
-        )
-        self.decoder = nn.Sequential(
-            ResBlock(),
-            nn.ConvTranspose2d(),
-            ResBlock(),
-            ResBlock(),
-            nn.ConvTranspose2d(),
-            ResBlock,
-            ResBlock(),
-            nn.ConvTranspose2d()
-        )
+                        OrderedDict([('conv1', self.conv1),
+                                     (self.res1, self.res1, self.conv2, self.res2, self.conv3, self.res3]))
+
+        self.deconv1 = nn.ConvTranspose2d(8, 3, 4, stride=2)
+        self.deconv2 = nn.ConvTranspose2d(16, 8, 4, stride=2)
+        self.deconv3 = nn.ConvTranspose2d(32, 16, 2, stride=2)
+
+        self.decoder = [self.res3, self.deconv3, self.res2, self.res2, self.deconv2, self.res1, self.res1, self.deconv1]
+
 
     def forward(self, x):
-        return self.decoder(self.encoder(x))
+        for m in en
 
-
+'''
 class Autoencoder(nn.Module):
     def __init__(self):
         super(Autoencoder, self).__init__()
@@ -92,7 +91,7 @@ class Autoencoder(nn.Module):
         x = self.encoder(x)
         x = self.decoder(x)
         return x
-
+'''
 
 model = ResAutoencoder()
 criterion = nn.MSELoss()
