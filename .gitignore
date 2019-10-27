@@ -2,3 +2,4 @@
 venv/*
 .idea/*
 lfwcrop_color/*
+*__pycache__*

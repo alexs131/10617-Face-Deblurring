@@ -1,13 +1,10 @@
 from torch import nn
 import torch
-from torchvision.datasets import FakeData
 from torch.autograd import Variable
 from torchvision.transforms import transforms
 
-import matplotlib.pyplot as plt
-
 from models.LFWC import LFWC
-
+import matplotlib.pyplot as plt
 
 class ResBlock(nn.Module):
     def __init__(self, input_channels, output_channels, filter_size):
@@ -23,16 +20,17 @@ class ResBlock(nn.Module):
 
 class Deblurrer(nn.Module):
     def __init__(self):
+        features = 64
         super(Deblurrer, self).__init__()
         self.network = nn.Sequential(
-            nn.Conv2d(3, 64, 5, stride=1, padding=2),
-            ResBlock(64, 64, 5),
-            ResBlock(64, 64, 5),
-            ResBlock(64, 64 ,5),
-            ResBlock(64, 64, 5),
-            ResBlock(64, 64, 5),
-            ResBlock(64, 64 ,5),
-            nn.Conv2d(64, 3, 5, stride=1, padding=2),
+            nn.Conv2d(3, features, 5, stride=1, padding=2),
+            ResBlock(features, features, 5),
+            ResBlock(features, features, 5),
+            ResBlock(features, features ,5),
+            ResBlock(features, features, 5),
+            ResBlock(features, features, 5),
+            ResBlock(features, features ,5),
+            nn.Conv2d(features, 3, 5, stride=1, padding=2),
         )
 
     def forward(self, x):
@@ -44,25 +42,26 @@ if __name__ == "__main__":
     learning_rate = .001
     num_epochs = 100
 
-    dataset = LFWC("../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces")
-
+    dataset = LFWC(["../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces_pixelated"], "../lfwcrop_color/faces")
     #dataset = FakeData(size=1000, image_size=(3, 128, 128), transform=transforms.ToTensor())
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
     criterion = nn.MSELoss()
 
-    for epoch in range(num_epochs):
+    for epoch in range(1):
         for data in data_loader:
-            img = Variable(data['blurred'])
+            blurred_img = Variable(data['blurred'])
+            nonblurred_img = Variable(data['nonblurred'])
+
             # ===================forward=====================
-            output = model(img)
-            loss = criterion(output, data['nonblurred'])
+            output = model(blurred_img)
+            loss = criterion(output, nonblurred_img)
             # ===================backward====================
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         # ===================log========================
         print('epoch [{}/{}], loss:{:.4f}'
-              .format(epoch + 1, num_epochs, loss.data[0]))
+              .format(epoch + 1, num_epochs, loss.data))
 
-
+    torch.save(model.state_dict(), 'semanticmodel')
