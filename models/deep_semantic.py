@@ -43,6 +43,7 @@ if __name__ == "__main__":
     num_epochs = 100
 
     dataset = LFWC(["../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces_pixelated"], "../lfwcrop_color/faces")
+
     #dataset = FakeData(size=1000, image_size=(3, 128, 128), transform=transforms.ToTensor())
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
@@ -63,5 +64,7 @@ if __name__ == "__main__":
         # ===================log========================
         print('epoch [{}/{}], loss:{:.4f}'
               .format(epoch + 1, num_epochs, loss.data))
+
+
 
     torch.save(model.state_dict(), 'semanticmodel')

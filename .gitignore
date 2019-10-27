@@ -3,3 +3,5 @@ venv/*
 .idea/*
 lfwcrop_color/*
 *__pycache__*
+test/*
+train/*
