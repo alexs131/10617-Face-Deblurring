@@ -10,9 +10,10 @@ import matplotlib.pyplot as plt
 class Clamper(nn.Module):
     def __init__(self, clamp_lower=False):
         super(Clamper, self).__init__()
+        self.clamp_lower = clamp_lower
 
     def forward(self, x):
-	if self.clamp_lower:
+        if self.clamp_lower:
             return x.clamp(min=0,max=255)
         return x.clamp(max=255)
 
