@@ -21,7 +21,7 @@ class ResBlock(nn.Module):
 
 class Deblurrer(nn.Module):
     def __init__(self):
-        features = 32
+        features = 8
         super(Deblurrer, self).__init__()
         self.network = nn.Sequential(
             nn.Conv2d(3, features, 5, stride=1, padding=2),
@@ -52,17 +52,19 @@ def run_model(model_path):
         #transform = transforms.ToTensor()
         transformback = transforms.ToPILImage()
         plt.imshow(transformback(blurred_img[0]))
+        plt.title('Blurred')
         plt.show()
         plt.imshow(transformback(nonblurred[0]))
+        plt.title('Non Blurred')
         plt.show()
 
 
         out = model(blurred_img)
         #print(out.shape)
         outIm = transformback(out[0])
-        plt.imshow()
 
         plt.imshow(outIm)
+        plt.title('Model out')
         plt.show()
 
 if __name__ == "__main__":
