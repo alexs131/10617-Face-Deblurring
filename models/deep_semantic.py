@@ -1,3 +1,4 @@
+from PIL import Image
 from torch import nn
 import torch
 from torch.autograd import Variable
@@ -20,7 +21,7 @@ class ResBlock(nn.Module):
 
 class Deblurrer(nn.Module):
     def __init__(self):
-        features = 64
+        features = 32
         super(Deblurrer, self).__init__()
         self.network = nn.Sequential(
             nn.Conv2d(3, features, 5, stride=1, padding=2),
@@ -37,20 +38,32 @@ class Deblurrer(nn.Module):
         return self.network(x)
 
 
-def run_model(model_path, image_path):
+def run_model(model_path):
     model = Deblurrer()
-    model.load_state_dict(torch.load(model_path))
+    model.load_state_dict(torch.load(model_path,map_location=torch.device('cpu')))
     model.eval()
+    dataset = LFWC(["../data/train/faces_blurred"], "../data/train/faces")
+    #dataset = FakeData(size=1000, image_size=(3, 128, 128), transform=transforms.ToTensor())
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
+    for data in data_loader:
+        blurred_img = Variable(data['blurred'])
+        nonblurred = Variable(data['nonblurred'])
+        #im = Image.open(image_path)
+        #transform = transforms.ToTensor()
+        transformback = transforms.ToPILImage()
+        plt.imshow(transformback(blurred_img[0]))
+        plt.show()
+        plt.imshow(transformback(nonblurred[0]))
+        plt.show()
 
-    im = Image.open(image_path)
-    transform = transforms.ToTensor()
-    transformback = transforms.ToPILImage()
 
-    out = model(transform(model))
-    outIm = transformback(out)
+        out = model(blurred_img)
+        #print(out.shape)
+        outIm = transformback(out[0])
+        plt.imshow()
 
-    plt.imshow(outIm)
-    plt.show()
+        plt.imshow(outIm)
+        plt.show()
 
 if __name__ == "__main__":
     model = Deblurrer()
@@ -61,7 +74,7 @@ if __name__ == "__main__":
     dataset = LFWC(["../data/train/faces_blurred"], "../data/train/faces")
 
     #dataset = FakeData(size=1000, image_size=(3, 128, 128), transform=transforms.ToTensor())
-    data_loader = torch.utils.data.DataLoader(dataset, batch_size=32, shuffle=True)
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5,amsgrad=True)
     criterion = nn.MSELoss()
 
