@@ -37,6 +37,21 @@ class Deblurrer(nn.Module):
         return self.network(x)
 
 
+def run_model(model_path, image_path):
+    model = Deblurrer()
+    model.load_state_dict(torch.load(model_path))
+    model.eval()
+
+    im = Image.open(image_path)
+    transform = transforms.ToTensor()
+    transformback = transforms.ToPILImage()
+    
+    out = model(transform(model))
+    outIm = transformback(out)
+
+    plt.imshow(outIm)
+    plt.show()
+
 if __name__ == "__main__":
     model = Deblurrer()
     learning_rate = .001
