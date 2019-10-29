@@ -63,17 +63,19 @@ def run_model(model_path):
         #transform = transforms.ToTensor()
         transformback = transforms.ToPILImage()
         plt.imshow(transformback(blurred_img[0]))
+        plt.title('Blurred')
         plt.show()
         plt.imshow(transformback(nonblurred[0]))
+        plt.title('Non Blurred')
         plt.show()
 
 
         out = model(blurred_img)
         #print(out.shape)
         outIm = transformback(out[0])
-        plt.imshow()
 
         plt.imshow(outIm)
+        plt.title('Model out')
         plt.show()
 
 if __name__ == "__main__":
