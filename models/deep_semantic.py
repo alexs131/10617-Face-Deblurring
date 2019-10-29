@@ -7,13 +7,22 @@ import sys
 from LFWC import LFWC
 import matplotlib.pyplot as plt
 
+class Clamper(nn.Module):
+    def __init__(self):
+        super(Clamper, self).__init__()
+
+    def forward(self, x):
+        return x.clamp(max=255)
+
 class ResBlock(nn.Module):
     def __init__(self, input_channels, output_channels, filter_size):
         super(ResBlock, self).__init__()
         self.block = nn.Sequential(
             nn.Conv2d(input_channels, output_channels, filter_size, stride=1, padding=2),
+	    Clamper(),
             nn.ReLU(True),
-            nn.Conv2d(input_channels, output_channels, filter_size, stride=1, padding=2)
+            nn.Conv2d(input_channels, output_channels, filter_size, stride=1, padding=2),
+	    Clamper()
         )
 
     def forward(self, x):
@@ -21,10 +30,11 @@ class ResBlock(nn.Module):
 
 class Deblurrer(nn.Module):
     def __init__(self):
-        features = 32
+        features = 8
         super(Deblurrer, self).__init__()
         self.network = nn.Sequential(
             nn.Conv2d(3, features, 5, stride=1, padding=2),
+            Clamper(),
             ResBlock(features, features, 5),
             ResBlock(features, features, 5),
             ResBlock(features, features ,5),
@@ -32,6 +42,7 @@ class Deblurrer(nn.Module):
             ResBlock(features, features, 5),
             ResBlock(features, features ,5),
             nn.Conv2d(features, 3, 5, stride=1, padding=2),
+ 	    Clamper()
         )
 
     def forward(self, x):
@@ -66,7 +77,7 @@ def run_model(model_path):
         plt.show()
 
 if __name__ == "__main__":
-    model = Deblurrer()
+    model = Deblurrer().cuda()
     learning_rate = .0001
     num_epochs = 100
 
@@ -82,8 +93,8 @@ if __name__ == "__main__":
         try:
             for epoch in range(100):
                 for data in data_loader:
-                    blurred_img = Variable(data['blurred'])
-                    nonblurred_img = Variable(data['nonblurred'])
+                    blurred_img = Variable(data['blurred']).cuda()
+                    nonblurred_img = Variable(data['nonblurred']).cuda()
 
                     # ===================forward=====================
                     output = model(blurred_img)
