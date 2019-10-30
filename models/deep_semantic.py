@@ -8,10 +8,13 @@ from LFWC import LFWC
 import matplotlib.pyplot as plt
 
 class Clamper(nn.Module):
-    def __init__(self):
+    def __init__(self, clamp_lower=False):
         super(Clamper, self).__init__()
+        self.clamp_lower = clamp_lower
 
     def forward(self, x):
+        if self.clamp_lower:
+            return x.clamp(min=0,max=255)
         return x.clamp(max=255)
 
 class ResBlock(nn.Module):
@@ -42,7 +45,7 @@ class Deblurrer(nn.Module):
             ResBlock(features, features, 5),
             ResBlock(features, features ,5),
             nn.Conv2d(features, 3, 5, stride=1, padding=2),
- 	    Clamper()
+ 	    Clamper(True)
         )
 
     def forward(self, x):
