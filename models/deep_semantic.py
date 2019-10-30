@@ -6,6 +6,7 @@ from torchvision.transforms import transforms
 import sys
 from LFWC import LFWC
 import matplotlib.pyplot as plt
+from metrics import psnr,ssim
 
 class ResBlock(nn.Module):
     def __init__(self, input_channels, output_channels, filter_size):
@@ -36,6 +37,28 @@ class Deblurrer(nn.Module):
 
     def forward(self, x):
         return self.network(x)
+
+def evaluate_metrics(model_path):
+    model = Deblurrer()
+    model.load_state_dict(torch.load(model_path,map_location=torch.device('cpu')))
+    model.eval()
+    dataset = LFWC(["../data/train/faces_blurred"], "../data/train/faces")
+    #dataset = FakeData(size=1000, image_size=(3, 128, 128), transform=transforms.ToTensor())
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
+    for data in data_loader:
+        blurred_img = Variable(data['blurred'])
+        nonblurred = Variable(data['nonblurred'])
+        #im = Image.open(image_path)
+        #transform = transforms.ToTensor()
+        transformback = transforms.ToPILImage()
+
+
+        out = model(blurred_img)
+        #print(out.shape)
+        outIm = transformback(out[0])
+        nonblurred = transformback(nonblurred[0])
+        ps = metrics.psnr(outIm,nonblurred)
+        print(ps)
 
 
 def run_model(model_path):
