@@ -199,7 +199,7 @@ if __name__ == "__main__":
                     output = model(blurred_img)
 
                     # ==================Train Discriminator=================
-                    optimizer_discrim.zero_grad()
+                    discriminator.zero_grad()
                     # Pass through real inputs
                     output_discrim = discriminator(nonblurred_img).view(-1)
                     # Get loss
