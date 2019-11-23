@@ -234,8 +234,8 @@ if __name__ == "__main__":
                     total_loss.backward()
                     optimizer.step()
                 # ===================log========================
-                print('epoch [{}/{}], loss:{:.4f}'
-              .format(epoch + 1, num_epochs, loss.data))
+                print('epoch [{}/{}], Deblurrer loss: {:.4f}, Discrim loss: {:.4f}'
+              .format(epoch + 1, num_epochs, total_loss.data, discrim_total_error.data))
         except KeyboardInterrupt:
             torch.save(model.state_dict(),'semanticmodelinterrupt')
             sys.exit()
