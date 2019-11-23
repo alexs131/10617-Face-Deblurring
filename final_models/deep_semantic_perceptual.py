@@ -51,6 +51,8 @@ class Deblurrer(nn.Module):
 
     def forward(self, x):
         return self.network(x)
+def perceptual_loss():
+    
 
 def evaluate_metrics(model_path):
     model = Deblurrer()
