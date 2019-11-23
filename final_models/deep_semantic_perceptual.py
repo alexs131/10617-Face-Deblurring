@@ -9,7 +9,7 @@ from LFWC import LFWC
 import matplotlib.pyplot as plt
 from metrics import psnr,ssim1
 from vgg_face import return_loaded_model
-from discriminator import Discriminator
+from discriminator import Discriminator, weights_init
 
 class Clamper(nn.Module):
     def __init__(self, clamp_lower=False):
@@ -151,7 +151,9 @@ if __name__ == "__main__":
     mse_loss_weight = 50
     perceptual_loss_weight = 1e-5
 
-    #discriminator = Discriminator(3, 8).cuda()
+    model = Deblurrer().cuda()
+    discriminator = Discriminator(3, 8).cuda()
+    discriminator.apply(weights_init)
 
     #dataset = LFWC(["../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces_pixelated"], "../lfwcrop_color/faces")
     dataset = LFWC(["../data/train/faces_blurred"], "../data/train/faces")
@@ -180,8 +182,33 @@ if __name__ == "__main__":
                     blurred_img = Variable(data['blurred'])
                     nonblurred_img = Variable(data['nonblurred'])
 
+                    labels = Variable(torch.full((batch_size,), real_label)).cuda()
 
                     output = model(blurred_img)
+
+                    # ==================Train Discriminator=================
+                    optimizer_discrim.zero_grad()
+                    # Pass through real inputs
+                    output_discrim = discriminator(nonblurred_img).view(-1)
+                    # Get loss
+                    labels.fill_(fake_label)
+                    discrim_error_real = discrim_criterion(output_discrim, labels)
+                    # Accumulate grads
+                    discrim_error_real.backward()
+                    discrim_x = output_discrim.mean().item()
+
+
+                    # Pass through deblurred inputs
+                    output_discrim = discriminator(output).view(-1)
+                    # Get loss
+                    labels.fill_(fake_label)
+                    discrim_error_fake = discrim_criterion(output_discrim, labels)
+                    # Accumulate grads
+                    discrim_error_fake.backward()
+                    discrim_generator_z = output_discrim.mean().item()
+                    # Sum loss and backprop
+                    discrim_total_error = discrim_error_fake + discrim_error_real
+                    optimizer_discrim.step()
 
 
                     optimizer.zero_grad()
