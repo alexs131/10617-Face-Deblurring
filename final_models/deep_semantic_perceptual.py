@@ -213,7 +213,7 @@ if __name__ == "__main__":
                     labels.fill_(fake_label)
                     discrim_error_fake = discrim_criterion(output_discrim, labels)
                     # Accumulate grads
-                    discrim_error_fake.backward()
+                    discrim_error_fake.backward(retain_graph=True)
                     discrim_generator_z = output_discrim.mean().item()
                     # Sum loss and backprop
                     discrim_total_error = discrim_error_fake + discrim_error_real
