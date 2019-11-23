@@ -224,12 +224,15 @@ if __name__ == "__main__":
                     # ===================Train Deblurrer (generator)=====================
                     # Get discrim output
                     output_discrim = discriminator(output).view(-1)
+                    # Get discrim loss
+                    labels.fill_(real_label)
+                    gen_loss = discrim_criterion(output_discrim, labels)
                     # perceptual_loss
                     loss_perceptual = perceptual_loss(vgg_net,output,nonblurred_img)
                     # MSE loss
                     mse_loss = mse_criterion(output, nonblurred_img)
                     # Total loss
-                    total_loss = mse_loss_weight * mse_loss + perceptual_loss_weight*loss_perceptual + gen_loss_weight * output_discrim
+                    total_loss = mse_loss_weight * mse_loss + perceptual_loss_weight*loss_perceptual + gen_loss_weight * gen_loss
                     # ===================backward====================
                     total_loss.backward()
                     optimizer.step()
