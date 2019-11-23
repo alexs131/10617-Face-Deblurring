@@ -5,3 +5,6 @@ lfwcrop_color/*
 *__pycache__*
 test/*
 train/*
+data/*
+models/semanticmodel
+models/semanticmodel2
