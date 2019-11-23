@@ -51,6 +51,8 @@ class Deblurrer(nn.Module):
 
     def forward(self, x):
         return self.network(x)
+def perceptual_loss():
+    
 
 def evaluate_metrics(model_path):
     model = Deblurrer()
@@ -100,7 +102,7 @@ def run_model(model_path):
     model = Deblurrer()
     model.load_state_dict(torch.load(model_path,map_location=torch.device('cpu')))
     model.eval()
-    dataset = LFWC(["../data/test/faces_blurred"], "../data/test/faces")
+    dataset = LFWC(["../data/train/faces_blurred"], "../data/train/faces")
     #dataset = FakeData(size=1000, image_size=(3, 128, 128), transform=transforms.ToTensor())
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     for data in data_loader:
@@ -126,10 +128,6 @@ def run_model(model_path):
         plt.show()
 
 if __name__ == "__main__":
-    run_model("model_with_clamping_8_features")
-    sys.exit(0)
-
-
     model = Deblurrer().cuda()
     learning_rate = .0001
     num_epochs = 100
