@@ -162,7 +162,10 @@ if __name__ == "__main__":
 
     #dataset = LFWC(["../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces_pixelated"], "../lfwcrop_color/faces")
     dataset = LFWC(["../data/train/faces_blurred"], "../data/train/faces")
-    vgg_net = return_loaded_model()
+    if torch.cuda.is_available():
+        vgg_net = return_loaded_model().cuda()
+    else:
+        vgg_net = return_loaded_model()
     '''
     im = cv2.imread("../vgg_face_torch/21172.ppm")
     im = torch.Tensor(im).permute(2, 0, 1).view(1, 3, 64, 64).double()
