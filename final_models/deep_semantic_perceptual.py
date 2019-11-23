@@ -151,8 +151,7 @@ if __name__ == "__main__":
     mse_loss_weight = 50
     perceptual_loss_weight = 1e-5
 
-    model = Deblurrer().cuda()
-    discriminator = Discriminator(3, 8).cuda()
+    #discriminator = Discriminator(3, 8).cuda()
 
     #dataset = LFWC(["../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces_pixelated"], "../lfwcrop_color/faces")
     dataset = LFWC(["../data/train/faces_blurred"], "../data/train/faces")
@@ -169,59 +168,32 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5,amsgrad=True)
     mse_criterion = nn.MSELoss()
 
-    discrim_criterion = nn.BCELoss()
-    real_label = 1
-    fake_label = 0
-    optimizer_discrim = torch.optim.Adam(discriminator.parameters(), lr=learning_rate_discrim, betas=(beta1, .999))
+    #discrim_criterion = nn.BCELoss()
+    #real_label = 1
+    #fake_label = 0
+    #optimizer_discrim = torch.optim.Adam(discriminator.parameters(), lr=learning_rate_discrim, betas=(beta1, .999))
 
     while(True):
         try:
             for epoch in range(100):
                 for data in data_loader:
-                    blurred_img = Variable(data['blurred']).cuda()
-                    nonblurred_img = Variable(data['nonblurred']).cuda()
+                    blurred_img = Variable(data['blurred'])
+                    nonblurred_img = Variable(data['nonblurred'])
 
-                    labels = torch.full((batch_size,), real_label).cuda()
 
                     output = model(blurred_img)
-
-                    # ==================Train Discriminator=================
-                    optimizer_discrim.zero_grad()
-                    # Pass through real inputs
-                    output_discrim = discriminator(nonblurred_img).view(-1)
-                    # Get loss
-                    labels.fill_(fake_label)
-                    discrim_error_real = discrim_criterion(output_discrim, labels).cuda()
-                    # Accumulate grads
-                    discrim_error_real.backward()
-                    discrim_x = output_discrim.mean().item()
-
-
-                    # Pass through deblurred inputs
-                    output_discrim = discriminator(output).view(-1)
-                    # Get loss
-                    discrim_error_fake = discrim_criterion(output_discrim, torch.full((batch_size,), fake_label)).cuda()
-                    # Accumulate grads
-                    discrim_error_fake.backward()
-                    discrim_generator_z = output_discrim.mean().item()
-                    # Sum loss and backprop
-                    discrim_total_error = discrim_error_fake + discrim_error_real
-                    optimizer_discrim.step()
 
 
                     optimizer.zero_grad()
                     # ===================Train Deblurrer (generator)=====================
                     # Get discrim output
-                    output_discrim = discriminator(output).view(-1)
-                    # Get discrim loss
-                    labels.fill_(real_label)
-                    gen_loss = discrim_criterion(output_discrim, labels)
+
                     # perceptual_loss
                     loss_perceptual = perceptual_loss(vgg_net,output,nonblurred_img)
                     # MSE loss
                     mse_loss = mse_criterion(output, nonblurred_img)
                     # Total loss
-                    total_loss = mse_loss_weight * mse_loss + gen_loss_weight * gen_loss + perceptual_loss_weight*perceptual_loss
+                    total_loss = mse_loss_weight * mse_loss + perceptual_loss_weight*loss_perceptual
                     # ===================backward====================
                     total_loss.backward()
                     optimizer.step()

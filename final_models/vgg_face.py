@@ -67,6 +67,8 @@ class VGG_16(nn.Module):
             x: input image (224x224)
         Returns: class logits
         """
+
+        # batch_size x 3 x 64 x 64
         results = []
         x = F.relu(self.conv_1_1(x))
         x = F.relu(self.conv_1_2(x))
@@ -97,7 +99,7 @@ class VGG_16(nn.Module):
 
 
 def return_loaded_model():
-    model = VGG_16().double()
+    model = VGG_16().float()
     model.load_weights()
     return model
 
