@@ -9,6 +9,7 @@ from LFWC import LFWC
 import matplotlib.pyplot as plt
 from metrics import psnr,ssim1
 from vgg_face import return_loaded_model
+from discriminator import Discriminator
 
 class Clamper(nn.Module):
     def __init__(self, clamp_lower=False):
@@ -141,7 +142,17 @@ def run_model(model_path):
 if __name__ == "__main__":
     model = Deblurrer()
     learning_rate = .0001
+    learning_rate_discrim = .0002
+    beta1 = 0.5
     num_epochs = 100
+    batch_size = 8
+
+    gen_loss_weight = 5e-5
+    mse_loss_weight = 50
+    perceptual_loss_weight = 1e-5
+
+    model = Deblurrer().cuda()
+    discriminator = Discriminator(3, 8).cuda()
 
     #dataset = LFWC(["../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces_pixelated"], "../lfwcrop_color/faces")
     dataset = LFWC(["../data/train/faces_blurred"], "../data/train/faces")
@@ -154,9 +165,14 @@ if __name__ == "__main__":
     print(perceptual_loss(vgg_net,im,im2))'''
 
     #dataset = FakeData(size=1000, image_size=(3, 128, 128), transform=transforms.ToTensor())
-    data_loader = torch.utils.data.DataLoader(dataset, batch_size=8, shuffle=True)
+    data_loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5,amsgrad=True)
-    criterion = nn.MSELoss()
+    mse_criterion = nn.MSELoss()
+
+    discrim_criterion = nn.BCELoss()
+    real_label = 1
+    fake_label = 0
+    optimizer_discrim = torch.optim.Adam(discriminator.parameters(), lr=learning_rate_discrim, betas=(beta1, .999))
 
     while(True):
         try:
@@ -165,12 +181,49 @@ if __name__ == "__main__":
                     blurred_img = Variable(data['blurred']).cuda()
                     nonblurred_img = Variable(data['nonblurred']).cuda()
 
-                    # ===================forward=====================
+                    labels = torch.full((batch_size,), real_label).cuda()
+
                     output = model(blurred_img)
-                    loss = criterion(output, nonblurred_img) + perceptual_loss(vgg_net,output,nonblurred_img)
-                    # ===================backward====================
+
+                    # ==================Train Discriminator=================
+                    optimizer_discrim.zero_grad()
+                    # Pass through real inputs
+                    output_discrim = discriminator(nonblurred_img).view(-1)
+                    # Get loss
+                    labels.fill_(fake_label)
+                    discrim_error_real = discrim_criterion(output_discrim, labels).cuda()
+                    # Accumulate grads
+                    discrim_error_real.backward()
+                    discrim_x = output_discrim.mean().item()
+
+
+                    # Pass through deblurred inputs
+                    output_discrim = discriminator(output).view(-1)
+                    # Get loss
+                    discrim_error_fake = discrim_criterion(output_discrim, torch.full((batch_size,), fake_label)).cuda()
+                    # Accumulate grads
+                    discrim_error_fake.backward()
+                    discrim_generator_z = output_discrim.mean().item()
+                    # Sum loss and backprop
+                    discrim_total_error = discrim_error_fake + discrim_error_real
+                    optimizer_discrim.step()
+
+
                     optimizer.zero_grad()
-                    loss.backward()
+                    # ===================Train Deblurrer (generator)=====================
+                    # Get discrim output
+                    output_discrim = discriminator(output).view(-1)
+                    # Get discrim loss
+                    labels.fill_(real_label)
+                    gen_loss = discrim_criterion(output_discrim, labels)
+                    # perceptual_loss
+                    loss_perceptual = perceptual_loss(vgg_net,output,nonblurred_img)
+                    # MSE loss
+                    mse_loss = mse_criterion(output, nonblurred_img)
+                    # Total loss
+                    total_loss = mse_loss_weight * mse_loss + gen_loss_weight * gen_loss + perceptual_loss_weight*perceptual_loss
+                    # ===================backward====================
+                    total_loss.backward()
                     optimizer.step()
                 # ===================log========================
                 print('epoch [{}/{}], loss:{:.4f}'
