@@ -8,3 +8,4 @@ train/*
 data/*
 models/semanticmodel
 models/semanticmodel2
+final_models/.idea/*
