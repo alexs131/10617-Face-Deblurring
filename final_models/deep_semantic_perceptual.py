@@ -203,7 +203,7 @@ if __name__ == "__main__":
                     labels.fill_(fake_label)
                     discrim_error_real = discrim_criterion(output_discrim, labels)
                     # Accumulate grads
-                    discrim_error_real.backward()
+                    discrim_error_real.backward(retain_graph=True)
                     discrim_x = output_discrim.mean().item()
 
 
