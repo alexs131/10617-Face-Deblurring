@@ -140,7 +140,10 @@ def run_model(model_path):
         plt.show()
 
 if __name__ == "__main__":
-    model = Deblurrer()
+    if torch.cuda.is_available():
+        model = Deblurrer().cuda()
+    else:
+        model = Deblurrer()
     learning_rate = .0001
     learning_rate_discrim = .0002
     beta1 = 0.5
@@ -151,8 +154,10 @@ if __name__ == "__main__":
     mse_loss_weight = 50
     perceptual_loss_weight = 1e-5
 
-    model = Deblurrer().cuda()
-    discriminator = Discriminator(3, 8).cuda()
+    if torch.cuda.is_available():
+        discriminator = Discriminator(3, 8).cuda()
+    else:
+        discriminator = Discriminator(3, 8)
     discriminator.apply(weights_init)
 
     #dataset = LFWC(["../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces_pixelated"], "../lfwcrop_color/faces")
@@ -170,19 +175,23 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5,amsgrad=True)
     mse_criterion = nn.MSELoss()
 
-    #discrim_criterion = nn.BCELoss()
-    #real_label = 1
-    #fake_label = 0
-    #optimizer_discrim = torch.optim.Adam(discriminator.parameters(), lr=learning_rate_discrim, betas=(beta1, .999))
+    discrim_criterion = nn.BCELoss()
+    real_label = 1
+    fake_label = 0
+    optimizer_discrim = torch.optim.Adam(discriminator.parameters(), lr=learning_rate_discrim, betas=(beta1, .999))
 
     while(True):
         try:
             for epoch in range(100):
                 for data in data_loader:
-                    blurred_img = Variable(data['blurred'])
-                    nonblurred_img = Variable(data['nonblurred'])
-
-                    labels = Variable(torch.full((batch_size,), real_label)).cuda()
+                    if torch.cuda.is_available():
+                        blurred_img = Variable(data['blurred']).cuda()
+                        nonblurred_img = Variable(data['nonblurred']).cuda()
+                        labels = Variable(torch.full((batch_size,), real_label)).cuda()
+                    else:
+                        blurred_img = Variable(data['blurred'])
+                        nonblurred_img = Variable(data['nonblurred'])
+                        labels = Variable(torch.full((batch_size,), real_label))
 
                     output = model(blurred_img)
 
