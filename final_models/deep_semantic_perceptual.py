@@ -190,11 +190,9 @@ if __name__ == "__main__":
                     if torch.cuda.is_available():
                         blurred_img = Variable(data['blurred']).cuda()
                         nonblurred_img = Variable(data['nonblurred']).cuda()
-                        labels = Variable(torch.full((batch_size,), real_label)).cuda()
                     else:
                         blurred_img = Variable(data['blurred'])
                         nonblurred_img = Variable(data['nonblurred'])
-                        labels = Variable(torch.full((batch_size,), real_label))
 
                     output = model(blurred_img)
 
@@ -203,7 +201,10 @@ if __name__ == "__main__":
                     # Pass through real inputs
                     output_discrim = discriminator(nonblurred_img).view(-1)
                     # Get loss
-                    labels.fill_(fake_label)
+                    if torch.cuda.is_available():
+                        labels = Variable(torch.full(output_discrim.shape, real_label)).cuda()
+                    else:
+                        labels = Variable(torch.full(output_discrim.shape, real_label))
                     discrim_error_real = discrim_criterion(output_discrim, labels)
                     # Accumulate grads
                     discrim_error_real.backward(retain_graph=True)
@@ -213,7 +214,10 @@ if __name__ == "__main__":
                     # Pass through deblurred inputs
                     output_discrim = discriminator(output).view(-1)
                     # Get loss
-                    labels.fill_(fake_label)
+                    if torch.cuda.is_available():
+                        labels = Variable(torch.full(output_discrim.shape, fake_label)).cuda()
+                    else:
+                        labels = Variable(torch.full(output_discrim.shape, fake_label))
                     discrim_error_fake = discrim_criterion(output_discrim, labels)
                     # Accumulate grads
                     discrim_error_fake.backward(retain_graph=True)
@@ -228,7 +232,10 @@ if __name__ == "__main__":
                     # Get discrim output
                     output_discrim = discriminator(output).view(-1)
                     # Get discrim loss
-                    labels.fill_(real_label)
+                    if torch.cuda.is_available():
+                        labels = Variable(torch.full(output_discrim.shape, real_label)).cuda()
+                    else:
+                        labels = Variable(torch.full(output_discrim.shape, real_label))
                     gen_loss = discrim_criterion(output_discrim, labels)
                     # perceptual_loss
                     loss_perceptual = perceptual_loss(vgg_net,output,nonblurred_img)
