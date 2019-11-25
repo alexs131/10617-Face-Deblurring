@@ -152,10 +152,6 @@ def run_model(model_path, discrim_path):
         plt.show()
 
 if __name__ == "__main__":
-    run_model('../trained/semantic_model_interrupt', '../trained/discrim_interrupt')
-    sys.exit(0)
-
-
     if torch.cuda.is_available():
         model = Deblurrer().cuda()
     else:
