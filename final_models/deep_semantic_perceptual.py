@@ -127,9 +127,9 @@ def run_model(model_path, discrim_path):
         nonblurred = Variable(data['nonblurred'])
 
         # Should be near zero
-        discrim_output_blurred = discriminator(blurred_img).view(-1).data
+        discrim_output_blurred = discriminator(blurred_img).view(-1).data.item()
         # Should be naer one
-        discrim_output_nonblurred = discriminator(nonblurred).view(-1).data
+        discrim_output_nonblurred = discriminator(nonblurred).view(-1).data.item()
 
         #im = Image.open(image_path)
         #transform = transforms.ToTensor()
@@ -143,7 +143,7 @@ def run_model(model_path, discrim_path):
 
 
         out = model(blurred_img)
-        discrim_output_model = discriminator(out).view(-1).data
+        discrim_output_model = discriminator(out).view(-1).data.item()
         #print(out.shape)
         outIm = transformback(out[0])
 
@@ -233,9 +233,6 @@ if __name__ == "__main__":
                     discrim_error_real = discrim_criterion(output_discrim, labels)
                     del labels
 
-                    # For record keeping
-                    loss_values['discrim_average_loss_on_real'] += discrim_error_real.data
-
                     # Accumulate grads
                     discrim_error_real.backward(retain_graph=True)
 
@@ -249,18 +246,17 @@ if __name__ == "__main__":
                     discrim_error_fake = discrim_criterion(output_discrim, labels)
                     del labels
 
-                    # For record keeping
-                    loss_values['discrim_average_loss_on_deblurred'] += discrim_error_fake.data
-
                     # Accumulate grads
                     discrim_error_fake.backward(retain_graph=True)
                     # Sum loss and backprop
                     discrim_total_error = discrim_error_fake + discrim_error_real
 
-                    loss_values['discrim_average_loss'] += discrim_total_error.data
-
                     optimizer_discrim.step()
 
+                    # For record keeping
+                    loss_values['discrim_average_loss_on_deblurred'] += discrim_error_fake.data.item()
+                    loss_values['discrim_average_loss'] += discrim_total_error.data.item()
+                    loss_values['discrim_average_loss_on_real'] += discrim_error_real.data.item()
 
                     optimizer.zero_grad()
                     # ===================Train Deblurrer (generator)=====================
@@ -275,26 +271,22 @@ if __name__ == "__main__":
                     gen_loss = discrim_criterion(output_discrim, labels)
                     del labels
 
-                    loss_values['deblur_average_gen_loss'] += gen_loss.data
-
                     # perceptual_loss
                     loss_perceptual = perceptual_loss(vgg_net,output,nonblurred_img)
-
-                    loss_values['deblur_average_percep_loss'] += loss_perceptual.data
 
                     # MSE loss
                     mse_loss = mse_criterion(output, nonblurred_img)
 
-                    loss_values['deblur_average_mse_loss'] += mse_loss.data
-
                     # Total loss
                     total_loss = mse_loss_weight * mse_loss + perceptual_loss_weight*loss_perceptual + gen_loss_weight * gen_loss
-
-                    loss_values['deblur_total_average_loss'] += total_loss.data
 
                     # ===================backward====================
                     total_loss.backward()
                     optimizer.step()
+                    loss_values['deblur_average_gen_loss'] += gen_loss.data.item()
+                    loss_values['deblur_average_percep_loss'] += loss_perceptual.data.item()
+                    loss_values['deblur_average_mse_loss'] += mse_loss.data.item()
+                    loss_values['deblur_total_average_loss'] += total_loss.data.item()
 
                 # ===================log========================
                 loss_values = {k: v/100 for k, v in loss_values.items()}
