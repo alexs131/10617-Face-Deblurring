@@ -231,12 +231,13 @@ if __name__ == "__main__":
                     else:
                         labels = Variable(torch.full(output_discrim.shape, real_label))
                     discrim_error_real = discrim_criterion(output_discrim, labels)
+                    del labels
 
                     # For record keeping
                     loss_values['discrim_average_loss_on_real'] += discrim_error_real.data
 
                     # Accumulate grads
-                    discrim_error_real.backward(retain_graph=True)
+                    discrim_error_real.backward()
                     discrim_x = output_discrim.mean().item()
 
 
@@ -248,12 +249,13 @@ if __name__ == "__main__":
                     else:
                         labels = Variable(torch.full(output_discrim.shape, fake_label))
                     discrim_error_fake = discrim_criterion(output_discrim, labels)
+                    del labels
 
                     # For record keeping
                     loss_values['discrim_average_loss_on_deblurred'] += discrim_error_fake.data
 
                     # Accumulate grads
-                    discrim_error_fake.backward(retain_graph=True)
+                    discrim_error_fake.backward()
                     discrim_generator_z = output_discrim.mean().item()
                     # Sum loss and backprop
                     discrim_total_error = discrim_error_fake + discrim_error_real
@@ -274,6 +276,7 @@ if __name__ == "__main__":
                         labels = Variable(torch.full(output_discrim.shape, real_label))
                     # Discrim loss
                     gen_loss = discrim_criterion(output_discrim, labels)
+                    del labels
 
                     loss_values['deblur_average_gen_loss'] += gen_loss.data
 
