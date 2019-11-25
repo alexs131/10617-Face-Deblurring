@@ -115,7 +115,7 @@ def run_model(model_path, discrim_path):
     model.load_state_dict(torch.load(model_path,map_location=torch.device('cpu')))
     model.eval()
 
-    discriminator = Discriminator()
+    discriminator = Discriminator(3, 64)
     discriminator.load_state_dict(torch.load(discrim_path, map_location=torch.device('cpu')))
     discriminator.eval()
 
@@ -127,9 +127,9 @@ def run_model(model_path, discrim_path):
         nonblurred = Variable(data['nonblurred'])
 
         # Should be near zero
-        discrim_output_blurred = Discriminator(blurred_img)
+        discrim_output_blurred = discriminator(blurred_img).view(-1).data
         # Should be naer one
-        discrim_output_nonblurred = Discriminator(nonblurred)
+        discrim_output_nonblurred = discriminator(nonblurred).view(-1).data
 
         #im = Image.open(image_path)
         #transform = transforms.ToTensor()
@@ -143,7 +143,7 @@ def run_model(model_path, discrim_path):
 
 
         out = model(blurred_img)
-        discrim_output_model = Discriminator(out)
+        discrim_output_model = discriminator(out).view(-1).data
         #print(out.shape)
         outIm = transformback(out[0])
 
@@ -152,6 +152,10 @@ def run_model(model_path, discrim_path):
         plt.show()
 
 if __name__ == "__main__":
+    run_model('../trained/semantic_model_interrupt', '../trained/discrim_interrupt')
+    sys.exit(0)
+
+
     if torch.cuda.is_available():
         model = Deblurrer().cuda()
     else:
@@ -238,8 +242,6 @@ if __name__ == "__main__":
 
                     # Accumulate grads
                     discrim_error_real.backward(retain_graph=True)
-                    discrim_x = output_discrim.mean().item()
-
 
                     # Pass through deblurred inputs
                     output_discrim = discriminator(output).view(-1)
@@ -256,11 +258,10 @@ if __name__ == "__main__":
 
                     # Accumulate grads
                     discrim_error_fake.backward(retain_graph=True)
-                    discrim_generator_z = output_discrim.mean().item()
                     # Sum loss and backprop
                     discrim_total_error = discrim_error_fake + discrim_error_real
 
-                    loss_values['discrim_average_loss'] += discrim_total_error
+                    loss_values['discrim_average_loss'] += discrim_total_error.data
 
                     optimizer_discrim.step()
 
