@@ -150,14 +150,17 @@ if __name__ == "__main__":
     num_epochs = 100
     batch_size = 8
 
-    gen_loss_weight = 5e-5
+    # Usually 5e-5 (in paper)
+    gen_loss_weight = 5e-3
     mse_loss_weight = 50
-    perceptual_loss_weight = 1e-5
+    # Usually 1e-5 (in paper)
+    perceptual_loss_weight = 1e-3
 
+    num_filters_init = 64
     if torch.cuda.is_available():
-        discriminator = Discriminator(3, 8).cuda()
+        discriminator = Discriminator(3, num_filters_init).cuda()
     else:
-        discriminator = Discriminator(3, 8)
+        discriminator = Discriminator(3, num_filters_init)
     discriminator.apply(weights_init)
 
     #dataset = LFWC(["../lfwcrop_color/faces_blurred", "../lfwcrop_color/faces_pixelated"], "../lfwcrop_color/faces")
@@ -250,7 +253,8 @@ if __name__ == "__main__":
                 print('epoch [{}/{}], Deblurrer loss: {:.4f}, Discrim loss: {:.4f}'
               .format(epoch + 1, num_epochs, total_loss.data, discrim_total_error.data))
         except KeyboardInterrupt:
-            torch.save(model.state_dict(),'semanticmodelinterrupt')
+            torch.save(model.state_dict(),'semantic_model_interrupt')
+            torch.save(discriminator.state_dict(), 'discrim_interrupt')
             sys.exit()
 
         break
