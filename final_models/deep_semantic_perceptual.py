@@ -237,7 +237,7 @@ if __name__ == "__main__":
                     loss_values['discrim_average_loss_on_real'] += discrim_error_real.data
 
                     # Accumulate grads
-                    discrim_error_real.backward()
+                    discrim_error_real.backward(retain_graph=True)
                     discrim_x = output_discrim.mean().item()
 
 
@@ -255,7 +255,7 @@ if __name__ == "__main__":
                     loss_values['discrim_average_loss_on_deblurred'] += discrim_error_fake.data
 
                     # Accumulate grads
-                    discrim_error_fake.backward()
+                    discrim_error_fake.backward(retain_graph=True)
                     discrim_generator_z = output_discrim.mean().item()
                     # Sum loss and backprop
                     discrim_total_error = discrim_error_fake + discrim_error_real
