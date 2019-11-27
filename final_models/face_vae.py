@@ -24,7 +24,7 @@ class ConvVAE(nn.Module):
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(init_filter_size * 4, init_filter_size * 8, 4, 2, 1),
-            nn.BatchNorm2d(init_filter_size * 8, 4, 2, 1),
+            nn.BatchNorm2d(init_filter_size * 8),
             nn.LeakyReLU(0.2),
 
             nn.Conv2d(init_filter_size * 8, init_filter_size * 8, 4, 2, 1),
@@ -32,10 +32,10 @@ class ConvVAE(nn.Module):
             nn.LeakyReLU(0.2)
         )
 
-        self.fc1 = nn.Linear(init_filter_size* 8 * 4 * 4, num_latent)
-        self.fc2 = nn.Linear(init_filter_size * 8 * 4 * 4, num_latent)
+        self.fc1 = nn.Linear(init_filter_size* 8 * 4, num_latent)
+        self.fc2 = nn.Linear(init_filter_size * 8 * 4, num_latent)
 
-        self.d1 = nn.Linear(num_latent, init_filter_size * 8 * 2 * 4 * 4)
+        self.d1 = nn.Linear(num_latent, init_filter_size * 8 * 2 * 4)
 
         self.decoder = nn.Sequential(
             nn.UpsamplingNearest2d(scale_factor=2),
@@ -71,12 +71,14 @@ class ConvVAE(nn.Module):
         self.relu_decode = nn.ReLU()
 
     def encode(self, x):
-        encoded = self.encoder.forward(x).view(-1, self.init_filter_size * 8 * 4 * 4)
+        out = self.encoder.forward(x)
+        encoded = out.view(-1, self.init_filter_size * 8 * 4)
         return self.fc1(encoded), self.fc2(encoded)
 
     def decode(self, z):
-        linear_applied = self.relu_decode(self.d1(z)).view(-1, self.init_filter_size * 8 * 2, 4, 4)
-        return self.decoder(linear_applied)
+        d1_out = self.relu_decode(self.d1(z))
+        d1_out = d1_out.view(-1, self.init_filter_size * 8 * 2, 2, 2)
+        return self.decoder(d1_out)
 
     def reparametrize(self, mu, logvar):
         std = logvar.mul(0.5).exp_()
