@@ -109,6 +109,16 @@ def evaluate_metrics(model_path):
     print(avgs)
     print(avgs1)
 
+def one_im_discrim(discrim_path, im_path):
+    discriminator = Discriminator(3, 64)
+    discriminator.load_state_dict(torch.load(discrim_path, map_location=torch.device('cpu')))
+    discriminator.eval()
+
+    tensor = transforms.ToTensor()
+    im = torchImage.open(im_path)
+
+    result = discriminator(tensor(Image.open(im_path))).view(-1)
+    print(result.data.item())
 
 def run_model(model_path, discrim_path):
     model = Deblurrer()
@@ -152,6 +162,10 @@ def run_model(model_path, discrim_path):
         plt.show()
 
 if __name__ == "__main__":
+    run_model("semanticmodel_gen_loss_1e3.pth", "discrim_gen_loss_1e3.pth")
+    sys.exit(0)
+
+
     if torch.cuda.is_available():
         model = Deblurrer().cuda()
     else:
@@ -289,7 +303,7 @@ if __name__ == "__main__":
                     loss_values['deblur_total_average_loss'] += total_loss.data.item()
 
                 # ===================log========================
-                loss_values = {k: v/100 for k, v in loss_values.items()}
+                loss_values = {k: v/num_epochs for k, v in loss_values.items()}
                 losses_per_epoch.append(loss_values)
 
                 print('epoch [{}/{}], {}'.format(epoch+1, num_epochs, loss_values))
