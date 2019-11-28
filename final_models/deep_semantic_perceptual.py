@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 from metrics import psnr,ssim1
 from vgg_face import return_loaded_model
 from discriminator import Discriminator, weights_init
+from deblurrer_batch_norm import DeblurrerBN
+
 
 class Clamper(nn.Module):
     def __init__(self, clamp_lower=False):
@@ -162,14 +164,10 @@ def run_model(model_path, discrim_path):
         plt.show()
 
 if __name__ == "__main__":
-    run_model("semanticmodel_gen_loss_1e3.pth", "discrim_gen_loss_1e3.pth")
-    sys.exit(0)
-
-
     if torch.cuda.is_available():
-        model = Deblurrer().cuda()
+        model = DeblurrerBN().cuda()
     else:
-        model = Deblurrer()
+        model = DeblurrerBN()
     learning_rate = .0001
     learning_rate_discrim = .0002
     beta1 = 0.5
