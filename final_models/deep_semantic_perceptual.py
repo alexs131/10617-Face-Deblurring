@@ -109,37 +109,63 @@ def evaluate_metrics(model_path):
     print(avgs)
     print(avgs1)
 
+def one_im_discrim(discrim_path, im_path):
+    discriminator = Discriminator(3, 64)
+    discriminator.load_state_dict(torch.load(discrim_path, map_location=torch.device('cpu')))
+    discriminator.eval()
 
-def run_model(model_path):
+    tensor = transforms.ToTensor()
+    im = torchImage.open(im_path)
+
+    result = discriminator(tensor(Image.open(im_path))).view(-1)
+    print(result.data.item())
+
+def run_model(model_path, discrim_path):
     model = Deblurrer()
     model.load_state_dict(torch.load(model_path,map_location=torch.device('cpu')))
     model.eval()
+
+    discriminator = Discriminator(3, 64)
+    discriminator.load_state_dict(torch.load(discrim_path, map_location=torch.device('cpu')))
+    discriminator.eval()
+
     dataset = LFWC(["../data/train/faces_blurred"], "../data/train/faces")
     #dataset = FakeData(size=1000, image_size=(3, 128, 128), transform=transforms.ToTensor())
     data_loader = torch.utils.data.DataLoader(dataset, batch_size=1, shuffle=True)
     for data in data_loader:
         blurred_img = Variable(data['blurred'])
         nonblurred = Variable(data['nonblurred'])
+
+        # Should be near zero
+        discrim_output_blurred = discriminator(blurred_img).view(-1).data.item()
+        # Should be naer one
+        discrim_output_nonblurred = discriminator(nonblurred).view(-1).data.item()
+
         #im = Image.open(image_path)
         #transform = transforms.ToTensor()
         transformback = transforms.ToPILImage()
         plt.imshow(transformback(blurred_img[0]))
-        plt.title('Blurred')
+        plt.title('Blurred, Discrim value: ' + str(discrim_output_blurred))
         plt.show()
         plt.imshow(transformback(nonblurred[0]))
-        plt.title('Non Blurred')
+        plt.title('Non Blurred, Discrim value: ' + str(discrim_output_nonblurred))
         plt.show()
 
 
         out = model(blurred_img)
+        discrim_output_model = discriminator(out).view(-1).data.item()
         #print(out.shape)
         outIm = transformback(out[0])
 
         plt.imshow(outIm)
-        plt.title('Model out')
+        plt.title('Model out, Discrim value: ' + str(discrim_output_model))
         plt.show()
 
 if __name__ == "__main__":
+    run_model("semanticmodel_gen_loss_1e3.pth", "discrim_gen_loss_1e3.pth")
+    sys.exit(0)
+
+
     if torch.cuda.is_available():
         model = Deblurrer().cuda()
     else:
@@ -185,10 +211,20 @@ if __name__ == "__main__":
     real_label = 1
     fake_label = 0
     optimizer_discrim = torch.optim.Adam(discriminator.parameters(), lr=learning_rate_discrim, betas=(beta1, .999))
+    losses_per_epoch = []
 
     while(True):
         try:
-            for epoch in range(100):
+            for epoch in range(num_epochs):
+                loss_values = {
+                    'deblur_total_average_loss': 0.0,
+                    'deblur_average_percep_loss': 0.0,
+                    'deblur_average_gen_loss': 0.0,
+                    'deblur_average_mse_loss': 0.0,
+                    'discrim_average_loss': 0.0,
+                    'discrim_average_loss_on_real': 0.0,
+                    'discrim_average_loss_on_deblurred': 0.0
+                }
                 for data in data_loader:
                     if torch.cuda.is_available():
                         blurred_img = Variable(data['blurred']).cuda()
@@ -209,10 +245,10 @@ if __name__ == "__main__":
                     else:
                         labels = Variable(torch.full(output_discrim.shape, real_label))
                     discrim_error_real = discrim_criterion(output_discrim, labels)
+                    del labels
+
                     # Accumulate grads
                     discrim_error_real.backward(retain_graph=True)
-                    discrim_x = output_discrim.mean().item()
-
 
                     # Pass through deblurred inputs
                     output_discrim = discriminator(output).view(-1)
@@ -222,13 +258,19 @@ if __name__ == "__main__":
                     else:
                         labels = Variable(torch.full(output_discrim.shape, fake_label))
                     discrim_error_fake = discrim_criterion(output_discrim, labels)
+                    del labels
+
                     # Accumulate grads
                     discrim_error_fake.backward(retain_graph=True)
-                    discrim_generator_z = output_discrim.mean().item()
                     # Sum loss and backprop
                     discrim_total_error = discrim_error_fake + discrim_error_real
+
                     optimizer_discrim.step()
 
+                    # For record keeping
+                    loss_values['discrim_average_loss_on_deblurred'] += discrim_error_fake.data.item()
+                    loss_values['discrim_average_loss'] += discrim_total_error.data.item()
+                    loss_values['discrim_average_loss_on_real'] += discrim_error_real.data.item()
 
                     optimizer.zero_grad()
                     # ===================Train Deblurrer (generator)=====================
@@ -239,25 +281,48 @@ if __name__ == "__main__":
                         labels = Variable(torch.full(output_discrim.shape, real_label)).cuda()
                     else:
                         labels = Variable(torch.full(output_discrim.shape, real_label))
+                    # Discrim loss
                     gen_loss = discrim_criterion(output_discrim, labels)
+                    del labels
+
                     # perceptual_loss
                     loss_perceptual = perceptual_loss(vgg_net,output,nonblurred_img)
+
                     # MSE loss
                     mse_loss = mse_criterion(output, nonblurred_img)
+
                     # Total loss
                     total_loss = mse_loss_weight * mse_loss + perceptual_loss_weight*loss_perceptual + gen_loss_weight * gen_loss
+
                     # ===================backward====================
                     total_loss.backward()
                     optimizer.step()
-                # ===================log========================
-                print('epoch [{}/{}], Deblurrer loss: {:.4f}, Discrim loss: {:.4f}'
-              .format(epoch + 1, num_epochs, total_loss.data, discrim_total_error.data))
-        except KeyboardInterrupt:
-            torch.save(model.state_dict(),'semantic_model_interrupt')
-            torch.save(discriminator.state_dict(), 'discrim_interrupt')
-            sys.exit()
+                    loss_values['deblur_average_gen_loss'] += gen_loss.data.item()
+                    loss_values['deblur_average_percep_loss'] += loss_perceptual.data.item()
+                    loss_values['deblur_average_mse_loss'] += mse_loss.data.item()
+                    loss_values['deblur_total_average_loss'] += total_loss.data.item()
 
+                # ===================log========================
+                loss_values = {k: v/num_epochs for k, v in loss_values.items()}
+                losses_per_epoch.append(loss_values)
+
+                print('epoch [{}/{}], {}'.format(epoch+1, num_epochs, loss_values))
+
+                #print('epoch [{}/{}], Deblurrer Total Average Loss: {:.4f}, ' +
+                #                'Discrim Average Loss: {:.4f}, '
+                #.format(epoch + 1, num_epochs, total_loss.data, discrim_total_error.data))
+        except KeyboardInterrupt:
+            torch.save(model.state_dict(),'semantic_model_interrupt.pth')
+            torch.save(discriminator.state_dict(), 'discrim_interrupt.pth')
+            f = open("losses.txt", "w")
+            f.write(str(losses_per_epoch))
+            f.close()
+            sys.exit()
         break
 
 
-    torch.save(model.state_dict(), 'semanticmodel')
+    torch.save(model.state_dict(), 'semanticmodel.pth')
+    torch.save(discriminator.state_dict(), 'discrim.pth')
+    f = open("losses.txt", "w")
+    f.write(str(losses_per_epoch))
+    f.close()
