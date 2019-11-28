@@ -43,8 +43,9 @@ def test(vae_path):
         plt.show()
 
 if __name__ == '__main__':
-    test("vae_model_interrupt.pth")
+    test("vae_model.pth")
     sys.exit(0)
+
 
     num_init_filters = 64
     num_latent_variables = 500

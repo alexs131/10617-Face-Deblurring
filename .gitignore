@@ -9,3 +9,4 @@ data/*
 models/semanticmodel
 models/semanticmodel2
 final_models/.idea/*
+final_models/trained_models/*
